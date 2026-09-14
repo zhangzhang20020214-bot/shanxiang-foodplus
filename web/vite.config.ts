@@ -1,9 +1,8 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-
-// 只放通这两个端点，与 api/dify/[...path].ts 里的白名单保持一致
-const ALLOWED = new Set(['/chat-messages', '/files/upload', '/messages'])
+// 白名单直接复用服务端那份，避免两处各写一份、改一处忘一处
+import { ALLOWED } from './server/difyProxy'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -21,7 +20,7 @@ export default defineConfig(({ mode }) => {
         name: 'dify-proxy-allowlist',
         // 本地 dev 代理会给你代注入密钥，所以不能什么都转发 ——
         // 否则你机器上任何程序（甚至一个网页）往 localhost 发请求都能借你的 key。
-        // 这里和 api/dify/[...path].ts 里的白名单保持一致，让 dev 与生产行为相同。
+        // 白名单复用 server/difyProxy.ts 那一份，让 dev 与生产行为完全相同。
         configureServer(server) {
           server.middlewares.use('/api/dify', (req, res, next) => {
             const path = (req.url || '').split('?')[0]

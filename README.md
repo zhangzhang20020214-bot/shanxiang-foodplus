@@ -66,7 +66,7 @@ DIFY_APIKEY=app-你的密钥
 
 > **这两个变量刻意不带 `VITE_` 前缀。** Vite 会把所有 `VITE_` 变量原样编译进浏览器包，
 > 部署后任何人打开 F12 就能读到密钥。所以密钥只存在于服务端：
-> 本地由 `vite.config.ts` 的 dev 代理注入，线上由 `api/dify/[...path].ts` 注入。
+> 本地由 `vite.config.ts` 的 dev 代理注入，线上由 `api/dify/` 下的两个路由注入。
 
 **没有 Dify 配置也能跑**：在 `.env.local` 里加 `VITE_USE_MOCK=true`，
 应用会走 `src/mock/mockDify.ts` 的本地假数据，不发起任何网络请求，方便单纯看 UI 和交互。
@@ -75,7 +75,10 @@ DIFY_APIKEY=app-你的密钥
 
 ```
 web/
-├── api/dify/[...path].ts     # 生产环境代理（Vercel Edge Function），注入密钥
+├── api/dify/                 # 生产环境代理（Vercel Edge Function），注入密钥
+│   ├── chat-messages.ts
+│   └── files/upload.ts
+├── server/difyProxy.ts       # 代理共用逻辑 + 路径白名单
 ├── src/
 │   ├── pages/                # Home 首页 / DishSearch 菜品搜索 / Profiles 档案 / Me 我的
 │   ├── components/           # 输入框、拍照弹窗、结果卡片、历史抽屉、图片预览…
@@ -92,7 +95,7 @@ knowledge-base/               # 食养指南知识库语料（Dify 检索用）
 
 1. 在 Vercel 导入本仓库，**Root Directory 设为 `web`**
 2. 在 Settings → Environment Variables 添加 `DIFY_APIKEY`（同样**不要**加 `VITE_` 前缀）
-3. 部署。`web/api/dify/[...path].ts` 会被自动识别为 Serverless 函数
+3. 部署。`web/api/dify/` 下的两个文件会被自动识别为 Serverless 函数
 
 部署后可用下面这条命令自查密钥有没有泄漏 —— 正常应该搜不到任何东西：
 

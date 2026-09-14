@@ -5,7 +5,7 @@ import { mockAnalyze } from '../mock/mockDify'
 // 浏览器**不直连 Dify、也不持有密钥**。
 // 所有请求打到同源的 /api/dify/*，由服务端那一层注入 Authorization：
 //   本地开发  → vite.config.ts 的 server.proxy
-//   线上部署  → api/dify/[...path].ts（Vercel Edge Function）
+//   线上部署  → api/dify/ 下的路由（Vercel Edge Function）
 // 这样密钥只存在于服务端环境变量里，构建产物中搜不到。
 //
 // 想跑纯静态版本（没有服务端函数时）就把 VITE_USE_MOCK 设为 'true'，
