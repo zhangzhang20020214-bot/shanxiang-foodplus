@@ -24,14 +24,19 @@ export default function App() {
 
 function Shell() {
   const { view } = useNav()
-  const [historyOpen, setHistoryOpen] = useState(false)
+  // 宽屏默认展开（豆包式常驻侧栏），窄屏默认收起；用户可随时手动开合
+  const [historyOpen, setHistoryOpen] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 768px)').matches,
+  )
 
   return (
     <div className="flex h-full">
       <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onOpenHistory={() => setHistoryOpen(true)} />
+        <TopBar onToggleHistory={() => setHistoryOpen((v) => !v)} />
         <main className="min-w-0 flex-1 overflow-hidden">
           {view.name === 'home' && <Home />}
           {view.name === 'dish' && <DishSearch />}

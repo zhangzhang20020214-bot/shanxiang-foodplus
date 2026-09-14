@@ -75,19 +75,31 @@ export interface Ingredient {
   note: string
 }
 
+// 字段全部可选：Agent 在无关模式下会返回空对象 {} 或省略字段
 export interface Nutrition {
-  ingredients: string[]
-  labels: Record<string, string>
-  riskItems: string[]
+  ingredients?: string[]
+  labels?: Record<string, string>
+  riskItems?: string[]
+}
+
+// 建议分级：key 关键（高亮）/ warn 风险（红色警示）/ normal 普通
+export type AdviceLevel = 'key' | 'warn' | 'normal'
+
+export interface AdviceItem {
+  text: string
+  level?: AdviceLevel
 }
 
 export interface Result {
   mode: Mode
   title: string
+  /** 一句话结论，前端置顶渲染成醒目卡片；由 Agent 按本次答案自行提炼 */
+  highlight?: string
   ingredients?: Ingredient[]
   dishes?: Dish[]
   nutrition?: Nutrition
-  advice?: string[]
+  /** 兼容两种写法：纯字符串数组，或带 level 的对象数组 */
+  advice?: (string | AdviceItem)[]
   disclaimer: string
 }
 

@@ -12,3 +12,17 @@ knowledge-source-pdf/
 node_modules/
 dist/
 build/
+
+# 环境变量（含 Dify API key，绝不能提交）
+# 注意：.env.example 是模板，**要**提交，所以不能写成 .env* 通配
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Vercel / 部署工具
+.vercel/
+
+# 构建产物里可能内联过旧密钥，不入库（上面已有 dist/，这里兜底）
+web/dist/
+web/.vite/

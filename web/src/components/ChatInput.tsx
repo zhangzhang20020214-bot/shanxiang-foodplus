@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { CameraIcon, ImageIcon, MicIcon, SendIcon } from './icons'
+import ImagePreview from './ImagePreview'
+import { MAX_IMAGES, compressImage, readAsDataUrl } from '../utils'
 
 interface Props {
   loading: boolean
@@ -7,6 +9,9 @@ interface Props {
   onTextChange: (v: string) => void
   onSend: (text: string, images: string[]) => void
   onCamera?: () => void
+  // 附件条由父组件持有：拍照 / 相册 / 快捷入口三条路径都往这里汇
+  images: string[]
+  onImagesChange: (v: string[]) => void
   // 引用块（豆包/GPT 式，悬浮于输入框上方，可单独关闭）
   quote?: string | null
   onClearQuote?: () => void
@@ -18,10 +23,11 @@ export default function ChatInput({
   onTextChange,
   onSend,
   onCamera,
+  images,
+  onImagesChange,
   quote,
   onClearQuote,
 }: Props) {
-  const [images, setImages] = useState<string[]>([])
   const [listening, setListening] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const recRef = useRef<any>(null)
@@ -36,18 +42,21 @@ export default function ChatInput({
     if (!text.trim() && images.length === 0) return
     onSend(text.trim(), images)
     onTextChange('')
-    setImages([])
+    onImagesChange([])
   }
 
-  const handleFiles = (files: FileList | null) => {
-    if (!files) return
-    Array.from(files)
-      .slice(0, 4)
-      .forEach((f) => {
-        const reader = new FileReader()
-        reader.onload = () => setImages((prev) => [...prev, String(reader.result)])
-        reader.readAsDataURL(f)
-      })
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return
+    const room = MAX_IMAGES - images.length
+    if (room <= 0) return
+    const picked = Array.from(files).slice(0, room)
+    const raw = await Promise.all(picked.map(readAsDataUrl))
+    const compressed = await Promise.all(raw.map((d) => compressImage(d)))
+    onImagesChange([...images, ...compressed])
+  }
+
+  const removeImage = (i: number) => {
+    onImagesChange(images.filter((_, j) => j !== i))
   }
 
   const toggleVoice = () => {
@@ -97,15 +106,22 @@ export default function ChatInput({
           </div>
         )}
         {images.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             {images.map((img, i) => (
-              <img
-                key={i}
-                src={img}
-                className="h-14 w-14 rounded-lg object-cover"
-                alt="上传预览"
-              />
+              <div key={i} className="relative">
+                <ImagePreview src={img} alt="待发送图片" />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-xs leading-none text-white transition hover:bg-red-600"
+                  aria-label="移除这张图片"
+                >
+                  ×
+                </button>
+              </div>
             ))}
+            <span className="text-xs text-slate-400">
+              {images.length}/{MAX_IMAGES}
+            </span>
           </div>
         )}
 

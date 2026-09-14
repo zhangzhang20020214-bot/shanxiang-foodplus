@@ -52,7 +52,7 @@ export default function DishSearch() {
       input: { text: name, images: [] },
     }
     try {
-      const response = await analyze(request)
+      const { response } = await analyze(request)
       appendTurn({ profile, mode: 'dish', text: name, images: [], response })
       setResult(response)
     } catch (e) {

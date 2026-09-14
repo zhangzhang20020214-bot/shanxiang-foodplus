@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -90,6 +91,14 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   const [selected, setSelected] = useState<HistoryItem | null>(null)
   // 当前会话对话 id（仅内存，刷新即视为结束）；null 表示下一次 append 新建对话
   const [currentId, setCurrentId] = useState<string | null>(null)
+  // appendTurn 在 await 之后才执行，那时闭包捕获的 currentId 已经过期，
+  // 会把手上的消息追加进「上一个」会话。用 ref 保证读到的永远是最新值。
+  const currentIdRef = useRef<string | null>(null)
+
+  const applyCurrentId = (id: string | null) => {
+    currentIdRef.current = id
+    setCurrentId(id)
+  }
 
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
@@ -112,8 +121,11 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   }): string => {
     const turnId = uid()
     const turn: HistoryTurn = { id: turnId, mode, text, images, response, quote }
-    const targetId = currentId ?? uid()
-    if (!currentId) setCurrentId(targetId)
+    let targetId = currentIdRef.current
+    if (!targetId) {
+      targetId = uid()
+      applyCurrentId(targetId)
+    }
 
     setHistory((prev) => {
       const existing = prev.find((h) => h.id === targetId)
@@ -144,14 +156,14 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     return turnId
   }
 
-  const resetConversation = () => setCurrentId(null)
+  const resetConversation = () => applyCurrentId(null)
 
-  const continueConversation = (id: string) => setCurrentId(id)
+  const continueConversation = (id: string) => applyCurrentId(id)
 
   const deleteItem = (id: string) => {
     setHistory((prev) => prev.filter((h) => h.id !== id))
     setSelected((prev) => (prev && prev.id === id ? null : prev))
-    if (currentId === id) setCurrentId(null)
+    if (currentIdRef.current === id) applyCurrentId(null)
   }
 
   const deleteTurn = (turnId: string) => {
@@ -167,7 +179,9 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
 
     if (owner) {
       // 当前会话被删空 → 结束当前会话
-      if (owner.id === currentId && remaining.length === 0) setCurrentId(null)
+      if (owner.id === currentIdRef.current && remaining.length === 0) {
+        applyCurrentId(null)
+      }
       // 同步选中的历史会话（删除其中被撤掉的轮次）
       if (selected && owner.id === selected.id) {
         setSelected(remaining.length === 0 ? null : { ...selected, turns: remaining })
@@ -177,7 +191,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
 
   const clearHistory = () => {
     setHistory([])
-    setCurrentId(null)
+    applyCurrentId(null)
   }
 
   const markOffered = (id: string) => {

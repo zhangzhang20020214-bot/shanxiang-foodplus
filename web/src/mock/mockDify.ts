@@ -69,12 +69,13 @@ function fridge(text: string): DifyResponse {
     result: {
       mode: 'fridge',
       title: '推荐餐食建议',
+      highlight: '现有食材够做两菜，蛋白质和蔬菜都齐，重点是控盐',
       ingredients,
       dishes,
       advice: [
-        '本餐以蛋类提供优质蛋白，搭配足量蔬菜',
-        '建议主食再搭配半碗杂粮饭',
-        '少油少盐，控盐目标下盐量不超过 3g',
+        { text: '主食再配半碗杂粮饭，升糖更平稳', level: 'key' },
+        { text: '控盐目标下，本餐总盐量建议控制在 3g 以内', level: 'warn' },
+        { text: '蛋类提供优质蛋白，与蔬菜比例合适', level: 'normal' },
       ],
       disclaimer: DISCLAIMER,
     },
@@ -110,11 +111,13 @@ function plate(text: string): DifyResponse {
     result: {
       mode: 'plate',
       title: '进食建议',
+      highlight: '这餐油盐偏高，红烧肉浅尝即可，主食减到小半碗',
       dishes,
       advice: [
-        '建议进食顺序：先蔬菜 → 再肉 → 最后主食',
-        '红烧肉去皮去肥肉，只吃 1～2 块',
-        '本餐油盐偏高，主食减量',
+        { text: '进食顺序：先蔬菜 → 再肉 → 最后主食', level: 'key' },
+        { text: '红烧肉去皮去肥肉，最多吃 1～2 块', level: 'warn' },
+        { text: '本餐油盐偏高，主食减量', level: 'warn' },
+        { text: '清炒时蔬清淡少油，可以正常吃', level: 'normal' },
       ],
       disclaimer: DISCLAIMER,
     },
@@ -137,8 +140,12 @@ function dish(text: string): DifyResponse {
     result: {
       mode: 'dish',
       title: '做法与健康改良',
+      highlight: '西兰花本身很适合你，关键在少油快炒和减盐',
       dishes,
-      advice: ['少油快炒保留营养', '焯水时间不宜过长以免营养流失'],
+      advice: [
+        { text: '用橄榄油替代、盐减 30%，这是最大的健康改良点', level: 'key' },
+        { text: '焯水时间不宜过长，否则维生素 C 流失', level: 'normal' },
+      ],
       disclaimer: DISCLAIMER,
     },
   }
@@ -180,8 +187,12 @@ function menu(text: string): DifyResponse {
     result: {
       mode: 'menu',
       title: '菜单推荐组合',
+      highlight: '推荐「清蒸鲈鱼 + 上汤娃娃菜 + 半碗米饭」，避开重油重辣的菜',
       dishes,
-      advice: ['推荐：清蒸鲈鱼 + 上汤娃娃菜 + 半碗米饭', '避免水煮牛肉等重油重辣菜'],
+      advice: [
+        { text: '推荐组合：清蒸鲈鱼 + 上汤娃娃菜 + 半碗米饭', level: 'key' },
+        { text: '水煮牛肉麻辣重油重盐，不建议', level: 'warn' },
+      ],
       disclaimer: DISCLAIMER,
     },
   }
@@ -193,14 +204,15 @@ function ingredient(text: string): DifyResponse {
     result: {
       mode: 'ingredient',
       title: '配料评估',
+      highlight: '每 100mL 含糖 9.5g，控糖目标下不建议喝',
       nutrition: {
         ingredients: ['水', '白砂糖', '浓缩果汁', '柠檬酸'],
         labels: { 热量: '180kJ/100mL', 糖: '9.5g/100mL', 钠: '12mg/100mL' },
         riskItems: ['白砂糖', '浓缩果汁'],
       },
       advice: [
-        '含糖量偏高，控糖目标下不建议饮用',
-        '可选择的替代：无糖茶饮或白水',
+        { text: '含糖量偏高，控糖目标下不建议饮用', level: 'warn' },
+        { text: '替代选择：无糖茶饮或白水', level: 'key' },
       ],
       disclaimer: DISCLAIMER,
     },

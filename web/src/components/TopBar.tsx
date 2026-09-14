@@ -2,7 +2,11 @@ import { useProfiles } from '../store/profiles'
 import { useNav } from '../store/nav'
 import { GearIcon, UserIcon } from './icons'
 
-export default function TopBar({ onOpenHistory }: { onOpenHistory: () => void }) {
+export default function TopBar({
+  onToggleHistory,
+}: {
+  onToggleHistory: () => void
+}) {
   const { currentProfile } = useProfiles()
   const { view, navigate } = useNav()
 
@@ -16,9 +20,10 @@ export default function TopBar({ onOpenHistory }: { onOpenHistory: () => void })
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 sm:px-4">
       {isHome ? (
         <button
-          onClick={onOpenHistory}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-slate-200 lg:hidden"
-          aria-label="历史记录"
+          onClick={onToggleHistory}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+          aria-label="展开或收起历史记录"
+          title="历史记录"
         >
           ☰
         </button>
@@ -34,7 +39,7 @@ export default function TopBar({ onOpenHistory }: { onOpenHistory: () => void })
         </button>
       )}
 
-      <button onClick={goHome} className="flex items-center gap-2 lg:hidden">
+      <button onClick={goHome} className="flex items-center gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-base font-bold text-white">
           膳
         </span>

@@ -1,10 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useHistory } from '../store/history'
 import { useProfiles } from '../store/profiles'
 import { useNav } from '../store/nav'
 import type { HistoryItem } from '../types'
 import { MODE_COLOR, MODE_ICON } from '../types'
 import { clock, groupByDay } from '../utils'
+
+const WIDE_QUERY = '(min-width: 768px)'
+
+// 宽屏：侧栏参与布局，挤压主内容，不遮挡、不阻塞交互
+// 窄屏：宽度不够，只能做成覆盖式抽屉
+function useIsWide() {
+  const [wide, setWide] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(WIDE_QUERY).matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_QUERY)
+    const onChange = () => setWide(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return wide
+}
 
 export default function HistoryPanel({
   open,
@@ -26,6 +43,12 @@ export default function HistoryPanel({
 
   const [confirmItem, setConfirmItem] = useState<HistoryItem | null>(null)
   const [deleteProfileToo, setDeleteProfileToo] = useState(false)
+  const wide = useIsWide()
+
+  // 选中记录 / 新建对话后：窄屏收起抽屉，宽屏保持展开（不打断连续操作）
+  const closeOnNarrow = () => {
+    if (!wide) onClose()
+  }
 
   const groups = groupByDay(history, (h) => h.time)
 
@@ -44,16 +67,28 @@ export default function HistoryPanel({
 
   const content = (
     <div className="flex h-full flex-col bg-white">
-      <button
-        onClick={() => navigate({ name: 'home' })}
-        className="flex items-center gap-2 border-b border-slate-200 px-4 py-3.5 text-left"
-        title="返回首页"
-      >
-        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-base font-bold text-white">
-          膳
-        </span>
-        <span className="text-base font-extrabold text-emerald-700">膳享+</span>
-      </button>
+      <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-3">
+        <button
+          onClick={() => navigate({ name: 'home' })}
+          className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-left"
+          title="返回首页"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-base font-bold text-white">
+            膳
+          </span>
+          <span className="text-base font-extrabold text-emerald-700">膳享+</span>
+        </button>
+        <div className="flex-1" />
+        {/* 宽屏没有遮罩可点，必须给一个显式的收起入口 */}
+        <button
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          aria-label="收起历史记录"
+          title="收起"
+        >
+          ✕
+        </button>
+      </div>
 
       <div className="px-3 py-3">
         <button
@@ -61,7 +96,7 @@ export default function HistoryPanel({
             newChat()
             resetConversation()
             setSessionProfile(null)
-            onClose()
+            closeOnNarrow()
           }}
           className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
         >
@@ -89,7 +124,7 @@ export default function HistoryPanel({
                       onClick={() => {
                         setSelected(h)
                         navigate({ name: 'home' })
-                        onClose()
+                        closeOnNarrow()
                       }}
                       className={`w-full rounded-xl px-3 py-2.5 text-left transition ${
                         active
@@ -143,16 +178,21 @@ export default function HistoryPanel({
 
   return (
     <>
-      <aside className="hidden h-full w-60 shrink-0 lg:block">{content}</aside>
-
-      {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl">
+      {open &&
+        (wide ? (
+          // 宽屏：在 flex 布局里占一列，主内容自动让位，两边都能正常操作
+          <aside className="h-full w-72 shrink-0 border-r border-slate-200">
             {content}
+          </aside>
+        ) : (
+          // 窄屏：宽度不够，做成覆盖式抽屉
+          <div className="fixed inset-0 z-40">
+            <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+            <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl">
+              {content}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
 
       {confirmItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
