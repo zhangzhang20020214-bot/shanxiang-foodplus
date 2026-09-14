@@ -129,6 +129,10 @@ async function describeFailure(res: Response, what: string): Promise<string> {
     // Dify 的密钥问题只说一句 "Access token is invalid"，看不出是键错了还是值脏了
     return `${what}失败：Dify 拒绝了密钥（401）。请确认托管平台上 DIFY_APIKEY 的值与 Dify 控制台里的一致，且该密钥没有被吊销。`
   }
+  if (res.status === 504) {
+    // Vercel 到点掐断函数时返回的就是 504，正文是一整页 HTML，直接透传没法看
+    return `${what}失败：服务端处理超时（504）。一次分析实测约需 20 秒，偶发的话稍后重试即可；若每次都超时，请检查 api/dify 下是否还留着 Edge 运行时（它的硬上限是 25 秒）。`
+  }
   if (res.status === 404 || res.status === 405) {
     return `${what}失败：找不到分析服务（${res.status}）。若这是纯静态托管，请把环境变量 VITE_USE_MOCK 设为 true 重新构建；否则检查 api/dify 是否已部署。`
   }
