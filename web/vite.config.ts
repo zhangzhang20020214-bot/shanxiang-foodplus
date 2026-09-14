@@ -2,14 +2,15 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 // 白名单直接复用服务端那份，避免两处各写一份、改一处忘一处
-import { ALLOWED } from './server/difyProxy'
+import { ALLOWED, normalizeKey } from './server/difyProxy'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // 第三个参数传 '' 表示**不加前缀**读取全部变量。
   // 默认只读 VITE_ 前缀的，而密钥恰恰不能用 VITE_ —— 那样会被内联进浏览器包。
   const env = loadEnv(mode, process.cwd(), '')
-  const apiKey = (env.DIFY_APIKEY ?? '').trim()
+  // 和线上用同一个清洗函数，避免「本地能跑、部署就 401」
+  const apiKey = normalizeKey(env.DIFY_APIKEY)
   const upstream = (env.DIFY_BASEURL || 'https://api.dify.ai/v1').replace(/\/$/, '')
 
   return {

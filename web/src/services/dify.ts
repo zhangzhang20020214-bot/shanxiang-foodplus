@@ -125,11 +125,16 @@ async function describeFailure(res: Response, what: string): Promise<string> {
     /* 不是 JSON，用原文 */
   }
 
+  if (res.status === 401) {
+    // Dify 的密钥问题只说一句 "Access token is invalid"，看不出是键错了还是值脏了
+    return `${what}失败：Dify 拒绝了密钥（401）。请确认托管平台上 DIFY_APIKEY 的值与 Dify 控制台里的一致，且该密钥没有被吊销。`
+  }
   if (res.status === 404 || res.status === 405) {
     return `${what}失败：找不到分析服务（${res.status}）。若这是纯静态托管，请把环境变量 VITE_USE_MOCK 设为 true 重新构建；否则检查 api/dify 是否已部署。`
   }
   if (res.status === 500 && detail.includes('DIFY_APIKEY')) {
-    return `${what}失败：服务端未配置 DIFY_APIKEY，请在托管平台的 Environment Variables 里添加后重新部署。`
+    // 服务端那段话已经写清楚了是缺了还是写坏了、以及怎么改，直接透传别覆盖
+    return `${what}失败：${detail}`
   }
   return `${what}失败：${res.status} ${detail}`
 }

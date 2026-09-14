@@ -19,6 +19,22 @@ const MAX_BODY = 12 * 1024 * 1024
 // 开放代理，别人可以拿它跑任意 Dify 接口、把你的额度刷光。
 export const ALLOWED = new Set(['/chat-messages', '/files/upload', '/messages'])
 
+/**
+ * 清理密钥里粘贴时最容易带进来的脏东西。
+ *
+ * 托管平台的环境变量输入框**不会**帮你 trim：从 .env 整行复制会带上
+ * `DIFY_APIKEY=` 前缀，手抖还会带引号或末尾换行。这些都会原样拼进
+ * Authorization 头，Dify 那边只会回一句 `401 Access token is invalid` ——
+ * 明明密钥是对的，却长得像密钥失效，极难排查。所以在这里统一洗一遍。
+ */
+export function normalizeKey(raw: string | undefined): string {
+  return (raw ?? '')
+    .trim()
+    .replace(/^DIFY_APIKEY\s*=\s*/, '')
+    .replace(/^["']|["']$/g, '')
+    .trim()
+}
+
 function fail(status: number, message: string, detail?: string) {
   return new Response(JSON.stringify({ error: message, detail }), {
     status,
@@ -36,7 +52,7 @@ export async function proxyToDify(req: Request, path: string): Promise<Response>
     return fail(403, 'path_not_allowed', `只允许访问：${[...ALLOWED].join(', ')}`)
   }
 
-  const key = process.env.DIFY_APIKEY
+  const key = normalizeKey(process.env.DIFY_APIKEY)
   if (!key) {
     // 部署了但忘了配环境变量时，给一句能直接照做的提示，
     // 别让前端拿到一个 500 猜半天
@@ -44,6 +60,19 @@ export async function proxyToDify(req: Request, path: string): Promise<Response>
       500,
       'server_misconfigured',
       '服务端缺少 DIFY_APIKEY。请在托管平台的 Environment Variables 里添加它（不要加 VITE_ 前缀），然后重新部署。',
+    )
+  }
+
+  // Dify 的应用密钥一律以 app- 开头。值明显不对时在这里就拦下来，
+  // 直接说清楚哪里不对——放过去只会变成 Dify 那句"Access token is invalid"。
+  // 注意只报长度、不回显内容：这句话会出现在浏览器里。
+  if (!key.startsWith('app-')) {
+    return fail(
+      500,
+      'server_misconfigured',
+      `服务端的 DIFY_APIKEY 不是 Dify 应用密钥：应以 app- 开头，当前值长 ${key.length} 个字符。` +
+        '常见原因是从 .env 里整行复制（把 DIFY_APIKEY= 也粘进去了）、或者值被引号/换行包住。' +
+        '请到托管平台的 Environment Variables 里改正后**重新部署**（改环境变量不会自动触发重新部署）。',
     )
   }
 
