@@ -6,7 +6,7 @@
 
 > ⚠️ 本项目不是医疗器械，不做诊断、不开处方、不承诺疗效。所有建议仅供参考。
 
-- **在线体验**：_（部署后把链接填在这里）_
+- **在线体验**：<https://shanxiang-foodplus.vercel.app/>
 - **产品设计文档**：[`PRD/foodplus_mvp_prd.md`](PRD/foodplus_mvp_prd.md)
 - **Agent 提示词**：[`PRD/dify_agent_prompt.md`](PRD/dify_agent_prompt.md)
 
@@ -97,6 +97,16 @@ knowledge-base/               # 食养指南知识库语料（Dify 检索用）
 2. 在 Settings → Environment Variables 添加 `DIFY_APIKEY`（同样**不要**加 `VITE_` 前缀）
 3. 部署。`web/api/dify/` 下的两个文件会被自动识别为 Serverless 函数
 
+> **两个踩过的坑，改这两个文件前请先看**
+>
+> - **必须用 Node 运行时，不能用 Edge。** Edge Function 硬性要求「25 秒内开始返回
+>   响应」（所有套餐一视同仁），而一次分析实测要 18~20 秒，必然被
+>   `FUNCTION_INVOCATION_TIMEOUT` 掐断。Node 运行时给了 60 秒（`maxDuration`）。
+> - **相对导入必须带 `.js` 后缀。** 本工程是 `"type": "module"`，而 Vercel 的 Node
+>   构建器逐文件转译、不做打包，所以运行时按字面路径解析。写成
+>   `'../../server/difyProxy'` 会让函数在加载阶段就崩（0.7 秒返回 500），
+>   报错只有一句 `FUNCTION_INVOCATION_FAILED`，完全看不出原因。
+
 部署后可用下面这条命令自查密钥有没有泄漏 —— 正常应该搜不到任何东西：
 
 ```bash
@@ -110,3 +120,10 @@ grep -rE 'app-[A-Za-z0-9]{20,}' web/dist/assets/ || echo "✅ 构建产物中无
 - **多轮图片**：Dify 存在已知问题（[issue #24683](https://github.com/langgenius/dify/issues/24683)），
   多轮对话中新上传的图片可能不刷新 `sys.files`，表现为第二张图不生效
 - 档案与历史记录存于浏览器 `localStorage`，换设备不同步（MVP 阶段有意为之）
+- **部署版有请求体上限**：Vercel 对函数请求体有大小限制。前端会把长边超过 1280px 的图
+  压到 1280px / JPEG 0.85（单张通常几百 KB），但**长边已不足 1280px 的图会原样上传**
+  ——体积偏大的 PNG 截图就走这条路径，4 张叠加可能触到上限。遇到就分开传
+- **部署版没有配额限制**：代理只是把密钥藏在了服务端，任何拿到链接的人都能调用，
+  消耗的是项目自己的 Dify 额度。若要长期公开，需要在 Dify 侧设用量上限或加一层限流
+- **首次分析约 20 秒**：知识库检索 + LLM 生成结构化 JSON 的耗时，不是卡住了。
+  分析过程中可以随时点「停止」，内容会退回输入框
